@@ -78,6 +78,10 @@ function executeSingleAttempt(
   const resDeserialize = (bytes: Buffer): Buffer => bytes;
 
   const metadata = new grpc.Metadata();
+  const ingestionAuthKey = process.env.STANTERPRISE_INGESTION_AUTH_KEY;
+  if (ingestionAuthKey) {
+    metadata.set("authorization", `Bearer ${ingestionAuthKey}`);
+  }
   const callOptions: grpc.CallOptions = {
     deadline: new Date(Date.now() + deadlineMs),
   };
@@ -149,7 +153,12 @@ async function attemptWithRetries(
     retriesRemaining--
   ) {
     try {
-      return await executeSingleAttempt(grpcClient, path, message, deadlineMs);
+      return await executeSingleAttempt(
+        grpcClient,
+        path,
+        message,
+        deadlineMs,
+      );
     } catch (err) {
       lastError = err as Error;
       const grpcErr = err as grpc.ServiceError;
@@ -160,6 +169,12 @@ async function attemptWithRetries(
       const hasRetriesLeft = retriesRemaining > 0;
 
       if (!isRetryable || !hasRetriesLeft) {
+        if (statusCode === grpc.status.UNAUTHENTICATED) {
+          throw new Error(
+            "Observer rejected ingestion authentication (UNAUTHENTICATED); " +
+              "verify STANTERPRISE_INGESTION_AUTH_KEY",
+          );
+        }
         throw err;
       }
 
