@@ -65,9 +65,17 @@ You can also configure the reporter using environment variables:
 - `STANTERPRISE_GRPC_ADDRESS`: gRPC server address (default: `localhost:50051`)
 - `STANTERPRISE_GRPC_HOST`: gRPC server host
 - `STANTERPRISE_GRPC_ENABLED`: Enable/disable gRPC reporting (default: `true`)
+- `STANTERPRISE_INGESTION_AUTH_KEY`: Optional shared Observer ingestion key. When set, the reporter sends `authorization: Bearer <key>` as gRPC metadata on every ingestion call. Leave unset for keyless local/AIO Observer.
+- `STANTERPRISE_GRPC_TLS`: Enable TLS for gRPC (default: `true`). Use TLS when sending the key over a network.
 - `STANTERPRISE_META_*`: Custom metadata fields for test runs (prefix will be stripped)
 - `STANTERPRISE_DEBUG`: Enable debug mode — captures outgoing gRPC messages to a JSONL file (default: `false`; case-insensitive: `"true"`, `"TRUE"`, `"True"` all work)
 - `STANTERPRISE_DEBUG_FILE`: File path for debug JSONL output (default: `stanterprise-debug.jsonl`)
+
+Keep the ingestion key in CI's secret store, not in reporter configuration,
+test metadata, or source control. The key is sent only in gRPC metadata and is
+not written to debug payloads. A missing or incorrect key causes Observer to
+reject ingestion; authentication failures are not retried and are reported
+without printing the key. Local/AIO deployments do not use this variable.
 
 #### Custom Metadata
 

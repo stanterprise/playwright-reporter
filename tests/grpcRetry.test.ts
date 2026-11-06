@@ -15,6 +15,7 @@ describe("gRPC Retry Functionality", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
+    delete process.env.STANTERPRISE_INGESTION_AUTH_KEY;
     
     testConfig = {
       grpcEnabled: true,
@@ -57,6 +58,7 @@ describe("gRPC Retry Functionality", () => {
       
       expect(mockClient.makeUnaryRequest).toHaveBeenCalledTimes(1);
       expect(response.toString()).toBe("success");
+      expect(mockClient.makeUnaryRequest.mock.calls[0][4].get("authorization")).toEqual([]);
     });
 
     it("should return empty buffer when grpcEnabled is false", async () => {
@@ -76,6 +78,45 @@ describe("gRPC Retry Functionality", () => {
   });
 
   describe("transient error retries", () => {
+    it("should send the bearer key on every attempt", async () => {
+      process.env.STANTERPRISE_INGESTION_AUTH_KEY = "test-ingestion-key";
+      let callCount = 0;
+      mockClient.makeUnaryRequest.mockImplementation(
+        (
+          _path: string,
+          _ser: any,
+          _des: any,
+          _msg: any,
+          _metadata: grpc.Metadata,
+          _opts: any,
+          cb: any,
+        ) => {
+          callCount++;
+          if (callCount === 1) {
+            const err = new Error("Service unavailable") as grpc.ServiceError;
+            err.code = grpc.status.UNAVAILABLE;
+            cb(err, null);
+          } else {
+            cb(null, Buffer.from("success"));
+          }
+        }
+      );
+
+      const responsePromise = reportUnary(
+        testConfig,
+        mockClient,
+        testPath,
+        mockMessage,
+      );
+      await jest.advanceTimersByTimeAsync(100);
+      await responsePromise;
+
+      expect(mockClient.makeUnaryRequest).toHaveBeenCalledTimes(2);
+      for (const call of mockClient.makeUnaryRequest.mock.calls) {
+        expect(call[4].get("authorization")).toEqual(["Bearer test-ingestion-key"]);
+      }
+    });
+
     it("should retry UNAVAILABLE errors with exponential backoff", async () => {
       let callCount = 0;
       mockClient.makeUnaryRequest.mockImplementation(
@@ -202,6 +243,26 @@ describe("gRPC Retry Functionality", () => {
   });
 
   describe("non-retryable errors", () => {
+    it("should report authentication rejection without exposing the key", async () => {
+      process.env.STANTERPRISE_INGESTION_AUTH_KEY = "test-ingestion-key";
+      mockClient.makeUnaryRequest.mockImplementation(
+        (_path: string, _ser: any, _des: any, _msg: any, _meta: any, _opts: any, cb: any) => {
+          const err = new Error("server error") as grpc.ServiceError;
+          err.code = grpc.status.UNAUTHENTICATED;
+          cb(err, null);
+        }
+      );
+
+      await expect(
+        reportUnary(testConfig, mockClient, testPath, mockMessage),
+      ).rejects.toThrow(
+        "Observer rejected ingestion authentication (UNAUTHENTICATED); " +
+          "verify STANTERPRISE_INGESTION_AUTH_KEY",
+      );
+
+      expect(mockClient.makeUnaryRequest).toHaveBeenCalledTimes(1);
+    });
+
     it("should NOT retry INVALID_ARGUMENT errors", async () => {
       mockClient.makeUnaryRequest.mockImplementation(
         (_path: string, _ser: any, _des: any, _msg: any, _meta: any, _opts: any, cb: any) => {
@@ -261,7 +322,7 @@ describe("gRPC Retry Functionality", () => {
 
       await expect(
         reportUnary(testConfig, mockClient, testPath, mockMessage, 1000)
-      ).rejects.toThrow("Unauthenticated");
+      ).rejects.toThrow("UNAUTHENTICATED");
 
       expect(mockClient.makeUnaryRequest).toHaveBeenCalledTimes(1);
     });
