@@ -534,4 +534,4 @@ ISC - See [LICENSE](LICENSE) file for details
 
 ## Support
 
-For issues and questions, please visit the [GitHub repository](https://github.com/stanterprise/stanterprise-playwright-reporter).
+For issues and questions, please visit the [GitHub repository](https://github.com/stanterprise/playwright-reporter).

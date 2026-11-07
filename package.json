@@ -2,13 +2,13 @@
   "name": "@stanterprise/playwright-reporter",
   "version": "1.1.0",
   "description": "Custom Playwright test reporter that sends test results to Stanterprise via gRPC",
-  "homepage": "https://github.com/stanterprise/stanterprise-playwright-reporter#readme",
+  "homepage": "https://github.com/stanterprise/playwright-reporter#readme",
   "bugs": {
-    "url": "https://github.com/stanterprise/stanterprise-playwright-reporter/issues"
+    "url": "https://github.com/stanterprise/playwright-reporter/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/stanterprise/stanterprise-playwright-reporter.git"
+    "url": "git+https://github.com/stanterprise/playwright-reporter.git"
   },
   "license": "ISC",
   "author": "Stanterprise Team",
