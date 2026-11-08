@@ -119,14 +119,10 @@ function executeSingleAttempt(
 }
 
 /**
- * Pauses execution for specified milliseconds with unref'd timer to avoid blocking shutdown
+ * Keep the timer referenced so Node cannot exit before pending retries finish.
  */
 function pauseExecution(durationMs: number): Promise<void> {
-  return new Promise((resolve) => {
-    const timer = setTimeout(resolve, durationMs);
-    // Unref the timer so it doesn't keep the process alive
-    timer.unref();
-  });
+  return new Promise((resolve) => setTimeout(resolve, durationMs));
 }
 
 /**
