@@ -1,6 +1,6 @@
 {
   "name": "@stanterprise/playwright-reporter",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Custom Playwright test reporter that sends test results to Stanterprise via gRPC",
   "homepage": "https://github.com/stanterprise/playwright-reporter#readme",
   "bugs": {
