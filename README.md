@@ -135,7 +135,7 @@ export default defineConfig({
     [
       "stanterprise-playwright-reporter",
       {
-        grpcMaxRetries: 5, // Try up to 5 times
+        grpcMaxRetries: 5, // Retry up to 5 times after the initial attempt
         grpcRetryDelay: 200, // Start with 200ms delay
         verbose: true, // Log retry attempts
       },
@@ -151,6 +151,17 @@ To disable retries:
   grpcMaxRetries: 0; // No retries, fail fast
 }
 ```
+
+The reporter sends events sequentially and waits for its queue, including retry
+delays, before closing its gRPC connection. Retry delays keep the Node process
+alive during shutdown. A large backlog or an unavailable server can therefore
+extend shutdown; `grpcTimeout` applies to each attempt and the retry limit
+applies to each event.
+
+If an event still fails after retries, the reporter logs the error and continues
+with the queue. The completion message means queue processing has finished, not
+that every event was delivered. Failed events are not saved for replay, and
+queued events are lost on forced termination.
 
 ## Debug Mode
 
